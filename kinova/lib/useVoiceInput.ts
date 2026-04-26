@@ -28,10 +28,12 @@ export function useVoiceInput(onResult: (transcript: string) => void) {
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
 
   const start = useCallback(() => {
+    if (isListening) return;
     const win = window as WindowWithSpeech;
     const SR = win.SpeechRecognition || win.webkitSpeechRecognition;
     if (!SR) return;
 
+    recognitionRef.current?.stop();
     const recognition = new SR();
     recognition.lang = "en-US";
     recognition.continuous = false;
@@ -43,9 +45,13 @@ export function useVoiceInput(onResult: (transcript: string) => void) {
     recognition.onerror = () => setIsListening(false);
     recognition.onend = () => setIsListening(false);
     recognitionRef.current = recognition;
-    recognition.start();
-    setIsListening(true);
-  }, [onResult]);
+    try {
+      recognition.start();
+      setIsListening(true);
+    } catch {
+      setIsListening(false);
+    }
+  }, [isListening, onResult]);
 
   const stop = useCallback(() => {
     recognitionRef.current?.stop();

@@ -5,9 +5,11 @@ import { squatAnalyzer } from "./squat";
 const exercises = {
   SQUAT: squatAnalyzer,
   "PUSH-UP": pushupAnalyzer,
+  PUSHUP: pushupAnalyzer,
   LUNGE: lungeAnalyzer,
 } as const;
 
 export function getExerciseAnalyzer(name: string) {
-  return exercises[name as keyof typeof exercises] ?? squatAnalyzer;
+  const key = name.trim().toUpperCase();
+  return exercises[key as keyof typeof exercises] ?? squatAnalyzer;
 }

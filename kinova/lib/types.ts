@@ -15,6 +15,8 @@ export interface GameState {
   };
   missions: Mission[];
   activeSkills: string[];
+  totalSessions?: number;
+  lastSessionAt?: number;
 }
 
 export interface Mission {

@@ -63,7 +63,7 @@ export function BossScreen({ state, onRep, onEvolve, onNav }: BossScreenProps) {
           START TRIAL
         </button>
         <button className="btn btn-ghost mt-3 px-4 py-2 text-[10px]" onClick={() => onNav("home")}>
-          ← BACK
+          BACK
         </button>
       </div>
     );
@@ -72,16 +72,16 @@ export function BossScreen({ state, onRep, onEvolve, onNav }: BossScreenProps) {
   if (phase === "evolved") {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center p-6 pb-24 text-center">
-        <div className="mb-3 font-display text-[10px] tracking-[0.15em] text-[var(--xp)]">✦ EVOLUTION COMPLETE ✦</div>
+        <div className="mb-3 font-display text-[10px] tracking-[0.15em] text-[var(--xp)]">EVOLUTION COMPLETE</div>
         <div className="relative mb-6">
           <div className="absolute -inset-8 rounded-full bg-[radial-gradient(circle,rgba(255,224,51,0.25)_0%,transparent_70%)]" />
           <Dragon size={192} state="evolving" level={state.level + 1} />
         </div>
         <div className="mb-1 font-display text-4xl font-black text-[var(--xp)]">LEVEL {state.level + 1}!</div>
         <div className="mb-1 text-sm text-[var(--muted)]">{reps} reps - trial complete</div>
-        <div className="mb-8 font-display text-[11px] text-[var(--success)]">NEW WORLD UNLOCKED →</div>
+        <div className="mb-8 font-display text-[11px] text-[var(--success)]">NEW WORLD UNLOCKED</div>
         <button className="btn btn-xp px-8 py-4 text-xs" onClick={() => onNav("home")}>
-          CONTINUE →
+          CONTINUE
         </button>
       </div>
     );
@@ -121,13 +121,13 @@ export function BossScreen({ state, onRep, onEvolve, onNav }: BossScreenProps) {
       </div>
       <div className="mb-4 grid grid-cols-3 gap-2">
         <button className="btn btn-xp px-2 py-3 text-[10px]" onClick={() => handleRep("perfect")}>
-          ⚡ PERFECT
+          PERFECT
         </button>
         <button className="btn btn-pow px-2 py-3 text-[10px]" onClick={() => handleRep("good")}>
-          ✓ GOOD
+          GOOD
         </button>
         <button className="btn btn-ghost px-2 py-3 text-[10px]" onClick={() => handleRep("fix")}>
-          ⚠ FIX
+          FIX
         </button>
       </div>
       <div className="card text-center">

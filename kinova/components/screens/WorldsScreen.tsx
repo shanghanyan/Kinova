@@ -7,7 +7,7 @@ const WORLDS: World[] = [
     id: "hiphop",
     name: "CYBER STAGE",
     style: "HIP HOP",
-    icon: "🤖",
+    icon: "HH",
     desc: "Futuristic neon arena. Lock, pop, and break through digital dimensions.",
     bg: "linear-gradient(135deg,#0d1b3e,#1a0d4d)",
     accent: "var(--agi)",
@@ -17,7 +17,7 @@ const WORLDS: World[] = [
     id: "latin",
     name: "TROPICAL FEST",
     style: "LATIN",
-    icon: "🌴",
+    icon: "LT",
     desc: "Vibrant carnival grounds. Salsa and merengue under golden light.",
     bg: "linear-gradient(135deg,#2d1a00,#3d2800)",
     accent: "var(--pow)",
@@ -27,7 +27,7 @@ const WORLDS: World[] = [
     id: "saber",
     name: "SABER DOJO",
     style: "SABER",
-    icon: "⚔️",
+    icon: "SB",
     desc: "Precision movement art. Flow with blade and beat.",
     bg: "linear-gradient(135deg,#0a2a1a,#0f1f0f)",
     accent: "var(--success)",
@@ -37,7 +37,7 @@ const WORLDS: World[] = [
     id: "soul",
     name: "SOUL TEMPLE",
     style: "FREESTYLE",
-    icon: "🔮",
+    icon: "FS",
     desc: "Ancient rhythms, modern moves. Unlock pure expression.",
     bg: "linear-gradient(135deg,#2d0a2d,#1a0d1a)",
     accent: "var(--sta)",
@@ -56,7 +56,7 @@ export function WorldsScreen({ state, onNav, onSelectWorld }: WorldsScreenProps)
     <div className="p-6 pb-24">
       <div className="mb-4 flex items-center gap-3">
         <button className="btn btn-ghost px-4 py-2 text-xs" onClick={() => onNav("home")}>
-          ← BACK
+          BACK
         </button>
         <div className="font-display text-lg font-black">WORLDS</div>
       </div>
@@ -93,7 +93,7 @@ export function WorldsScreen({ state, onNav, onSelectWorld }: WorldsScreenProps)
                 {!locked && (
                   <div className="mt-3">
                     <button className="btn px-4 py-2 text-[10px]" style={{ background: world.accent, color: "#07090f" }}>
-                      ENTER WORLD →
+                      ENTER WORLD
                     </button>
                   </div>
                 )}

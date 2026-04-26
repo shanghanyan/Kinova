@@ -46,7 +46,7 @@ export function StatRing({
         />
       </svg>
       <div className="ring-label">
-        <span style={{ fontSize: 18 }}>{icon}</span>
+        <span style={{ fontSize: 10, letterSpacing: "0.08em", fontWeight: 700 }}>{icon}</span>
         <span className="ring-val" style={{ color }}>
           {value}
         </span>

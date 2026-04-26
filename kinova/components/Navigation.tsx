@@ -1,15 +1,17 @@
 "use client";
 
+import { unlockVoice } from "@/lib/voice";
+
 interface NavigationProps {
   currentScreen: string;
   onNavigate: (screen: string) => void;
 }
 
 const navItems = [
-  { id: "home", icon: "🏠", label: "HOME" },
-  { id: "gym", icon: "💪", label: "GYM" },
-  { id: "worlds", icon: "🌍", label: "WORLDS" },
-  { id: "skills", icon: "🌳", label: "SKILLS" },
+  { id: "home", icon: "HM", label: "HOME" },
+  { id: "gym", icon: "GY", label: "GYM" },
+  { id: "worlds", icon: "WD", label: "WORLDS" },
+  { id: "skills", icon: "SK", label: "SKILLS" },
 ];
 
 export function Navigation({ currentScreen, onNavigate }: NavigationProps) {
@@ -19,7 +21,11 @@ export function Navigation({ currentScreen, onNavigate }: NavigationProps) {
         <button
           key={item.id}
           className={`nav-btn ${currentScreen === item.id ? "active" : ""}`}
-          onClick={() => onNavigate(item.id)}
+          onClick={() => {
+            console.info(`[nav] tap ${item.id} -> unlockVoice()`);
+            unlockVoice();
+            onNavigate(item.id);
+          }}
         >
           <span className="icon">{item.icon}</span>
           {item.label}

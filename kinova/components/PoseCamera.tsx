@@ -25,6 +25,8 @@ interface PoseCameraProps {
   persona?: string;
   skeletonColor?: string;
   onFormUpdate?: (payload: { score: number; errors: string[]; phase: string; movement: number }) => void;
+  isActive?: boolean;
+  autoVoiceCues?: boolean;
 }
 
 export function PoseCamera({
@@ -37,17 +39,44 @@ export function PoseCamera({
   persona = "cinematic",
   skeletonColor = "#00e5ff",
   onFormUpdate,
+  isActive = true,
+  autoVoiceCues = true,
 }: PoseCameraProps) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [reps, setReps] = useState(0);
   const [status, setStatus] = useState("Initializing camera...");
+  const [warning, setWarning] = useState<string | null>(null);
   const repCounter = useMemo(() => new RepCounter(), []);
   const riskEngine = useMemo(() => new InjuryRiskEngine(), []);
   const repScores = useRef<number[]>([]);
   const setCompletedRef = useRef(false);
+  const lastLandmarkAtRef = useRef<number>(0);
+  const exerciseRef = useRef(exerciseName);
+  const targetRepsRef = useRef(targetReps);
+  const injuriesRef = useRef(userInjuries);
+  const onRepRef = useRef(onRep);
+  const onSetCompleteRef = useRef(onSetComplete);
+  const onFormUpdateRef = useRef(onFormUpdate);
+  const skeletonColorRef = useRef(skeletonColor);
+  const autoVoiceCuesRef = useRef(autoVoiceCues);
 
   useEffect(() => {
+    exerciseRef.current = exerciseName;
+    targetRepsRef.current = targetReps;
+    injuriesRef.current = userInjuries;
+    onRepRef.current = onRep;
+    onSetCompleteRef.current = onSetComplete;
+    onFormUpdateRef.current = onFormUpdate;
+    skeletonColorRef.current = skeletonColor;
+  }, [exerciseName, onFormUpdate, onRep, onSetComplete, skeletonColor, targetReps, userInjuries]);
+
+  useEffect(() => {
+    autoVoiceCuesRef.current = autoVoiceCues;
+  }, [autoVoiceCues]);
+
+  useEffect(() => {
+    if (!isActive) return;
     let stream: MediaStream | null = null;
     let raf = 0;
     let running = true;
@@ -56,33 +85,59 @@ export function PoseCamera({
       try {
         stream = await navigator.mediaDevices.getUserMedia({ video: true });
         if (!videoRef.current) return;
+        const handleVideoProblem = () => {
+          setWarning("Camera stream interrupted. Check permissions or reload stream.");
+        };
+        videoRef.current.onstalled = handleVideoProblem;
+        videoRef.current.onerror = handleVideoProblem;
         videoRef.current.srcObject = stream;
         await videoRef.current.play();
+        stream.getTracks().forEach((track) => {
+          track.onended = () => {
+            setWarning("Camera stream ended unexpectedly. Please re-enable camera.");
+          };
+        });
         const landmarker = await initPoseLandmarker();
-        const analyzer = getExerciseAnalyzer(exerciseName);
+        let analyzer = getExerciseAnalyzer(exerciseRef.current);
+        let currentExercise = exerciseRef.current;
         let phase = "up";
         let prevAngles: BodyAngles | null = null;
         let prevTs = performance.now();
         setStatus("Tracking...");
 
         setCompletedRef.current = false;
+        setWarning(null);
+        lastLandmarkAtRef.current = performance.now();
         const tick = () => {
           if (!running || !videoRef.current) return;
+          if (exerciseRef.current !== currentExercise) {
+            currentExercise = exerciseRef.current;
+            analyzer = getExerciseAnalyzer(currentExercise);
+            phase = "up";
+            prevAngles = null;
+            prevTs = performance.now();
+            repCounter.reset();
+            repScores.current = [];
+            setCompletedRef.current = false;
+            setReps(0);
+          }
           const result = landmarker.detectForVideo(videoRef.current, performance.now());
           const landmarks = result.landmarks?.[0];
           if (landmarks) {
+            lastLandmarkAtRef.current = performance.now();
+            setWarning((prev) => (prev ? null : prev));
             const angles = extractAngles(landmarks);
             if (angles) {
               phase = analyzer.detectPhase(angles, phase);
               const rep = repCounter.update(phase);
-              const feedback = analyzer.analyzeFrame(angles, phase, userInjuries);
+              const feedback = analyzer.analyzeFrame(angles, phase, injuriesRef.current);
               const frameScore = analyzer.scoreRep(feedback);
               const movement =
                 prevAngles && performance.now() - prevTs > 0
                   ? Math.abs((angles.leftKnee ?? 0) - (prevAngles.leftKnee ?? 0)) /
                     ((performance.now() - prevTs) / 1000)
                   : 0;
-              onFormUpdate?.({
+              onFormUpdateRef.current?.({
                 score: frameScore,
                 errors: feedback.map((f) => f.message),
                 phase,
@@ -95,15 +150,15 @@ export function PoseCamera({
                 riskEngine.analyze(score);
                 repScores.current.push(score);
                 setReps(rep);
-                onRep?.({ rep, score });
+                onRepRef.current?.({ rep, score });
                 const cue = feedback.find((f) => f.voiceCue)?.voiceCue;
-                if (cue) speak(cue, true);
-                if (rep >= targetReps) {
+                if (cue && autoVoiceCuesRef.current) speak(cue, true);
+                if (rep >= targetRepsRef.current) {
                   if (!setCompletedRef.current) {
                     setCompletedRef.current = true;
                     const avgFormScore =
                       repScores.current.reduce((a, b) => a + b, 0) / repScores.current.length;
-                    onSetComplete({
+                    onSetCompleteRef.current({
                       reps: rep,
                       avgFormScore: Number.isFinite(avgFormScore) ? avgFormScore : 0,
                       repScores: repScores.current,
@@ -112,6 +167,8 @@ export function PoseCamera({
                 }
               }
             }
+          } else if (performance.now() - lastLandmarkAtRef.current > 2500) {
+            setWarning("Tracking lost: move into frame and ensure good lighting.");
           }
 
           const ctx = canvasRef.current?.getContext("2d");
@@ -125,7 +182,7 @@ export function PoseCamera({
                 landmarks,
                 canvasRef.current.width,
                 canvasRef.current.height,
-                skeletonColor,
+                skeletonColorRef.current,
               );
             }
           }
@@ -135,6 +192,7 @@ export function PoseCamera({
         tick();
       } catch {
         setStatus("Camera unavailable");
+        setWarning("Camera unavailable. Allow camera access to continue.");
       }
     };
 
@@ -142,28 +200,22 @@ export function PoseCamera({
     return () => {
       running = false;
       cancelAnimationFrame(raf);
-      cancelSpeech();
       if (stream) stream.getTracks().forEach((t) => t.stop());
     };
-  }, [
-    exerciseName,
-    onFormUpdate,
-    onRep,
-    onSetComplete,
-    repCounter,
-    riskEngine,
-    skeletonColor,
-    targetReps,
-    userInjuries,
-  ]);
+  }, [isActive, repCounter, riskEngine]);
 
   return (
     <div className="relative overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface2)]">
       <video ref={videoRef} className="h-full w-full object-cover -scale-x-100" muted playsInline />
       <canvas ref={canvasRef} className="absolute inset-0 h-full w-full -scale-x-100" />
       <div className="absolute left-3 top-3 rounded-full bg-black/50 px-3 py-1 font-display text-xs">
-        {status} | {exerciseName} | {danceMode.toUpperCase()} | {persona} | Reps: {reps}/{targetReps}
+        {isActive ? status : "Paused"} | {exerciseName} | {danceMode.toUpperCase()} | {persona} | Reps: {reps}/{targetReps}
       </div>
+      {warning && (
+        <div className="absolute left-3 right-3 top-11 rounded-md border border-amber-400/60 bg-amber-500/20 px-3 py-2 text-xs text-amber-100">
+          ALERT: {warning}
+        </div>
+      )}
       <div className="absolute bottom-3 right-3">
         <Dragon size={60} state="idle" />
       </div>

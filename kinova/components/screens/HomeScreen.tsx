@@ -3,6 +3,9 @@
 import type { GameState } from "@/lib/types";
 import { Dragon } from "@/components/ui/Dragon";
 import { StatRing } from "@/components/ui/StatRing";
+import { CoachChat } from "@/components/CoachChat";
+import { VoiceDiagnostics } from "@/components/VoiceDiagnostics";
+import { unlockVoice } from "@/lib/voice";
 
 interface HomeScreenProps {
   state: GameState;
@@ -20,7 +23,7 @@ export function HomeScreen({ state, onNav }: HomeScreenProps) {
           <div className="font-display text-[10px] tracking-[0.1em] text-[var(--muted)]">LEVEL {level}</div>
           <div className="font-display text-xl font-black tracking-[0.04em]">{creature.name}</div>
         </div>
-        <div className="streak-badge">🔥 {streak} DAY STREAK</div>
+        <div className="streak-badge">{streak} DAY STREAK</div>
       </div>
 
       <div className="mb-7">
@@ -36,7 +39,7 @@ export function HomeScreen({ state, onNav }: HomeScreenProps) {
       </div>
 
       <div className="mb-8 flex flex-wrap items-center justify-center gap-4">
-        <StatRing value={stats.pow} color="var(--pow)" label="POWER" icon="🔥" />
+        <StatRing value={stats.pow} color="var(--pow)" label="POWER" icon="POW" />
         <div className="flex flex-col items-center gap-3">
           <Dragon size={148} state={creature.state} level={level} />
           {statsReady && (
@@ -45,21 +48,39 @@ export function HomeScreen({ state, onNav }: HomeScreenProps) {
             </button>
           )}
         </div>
-        <StatRing value={stats.agi} color="var(--agi)" label="AGILITY" icon="⚡" />
+        <StatRing value={stats.agi} color="var(--agi)" label="AGILITY" icon="AGI" />
       </div>
       <div className="mb-8 flex justify-center">
-        <StatRing value={stats.sta} color="var(--sta)" label="STAMINA" icon="💜" />
+        <StatRing value={stats.sta} color="var(--sta)" label="STAMINA" icon="STA" />
       </div>
 
       <div className="mb-8 grid grid-cols-3 gap-3">
-        <button className="btn btn-pow px-2 py-3 text-[10px]" onClick={() => onNav("gym")}>
-          💪 TRAIN
+        <button
+          className="btn btn-pow px-2 py-3 text-[10px]"
+          onClick={() => {
+            unlockVoice();
+            onNav("gym");
+          }}
+        >
+          TRAIN
         </button>
-        <button className="btn btn-sta px-2 py-3 text-[10px]" onClick={() => onNav("worlds")}>
-          🌍 PERFORM
+        <button
+          className="btn btn-sta px-2 py-3 text-[10px]"
+          onClick={() => {
+            unlockVoice();
+            onNav("worlds");
+          }}
+        >
+          PERFORM
         </button>
-        <button className="btn btn-ghost px-2 py-3 text-[10px]" onClick={() => onNav("skills")}>
-          🌳 SKILLS
+        <button
+          className="btn btn-ghost px-2 py-3 text-[10px]"
+          onClick={() => {
+            unlockVoice();
+            onNav("skills");
+          }}
+        >
+          SKILLS
         </button>
       </div>
 
@@ -69,7 +90,7 @@ export function HomeScreen({ state, onNav }: HomeScreenProps) {
           {missions.map((m, i) => (
             <div className="mission-row" key={i}>
               <div className="mission-check" style={{ background: m.done ? "var(--success)" : "var(--surface)" }}>
-                {m.done ? "✓" : m.icon}
+                {m.done ? "OK" : m.icon}
               </div>
               <div className="flex-1">
                 <div className="text-[13px] font-medium">{m.label}</div>
@@ -80,6 +101,9 @@ export function HomeScreen({ state, onNav }: HomeScreenProps) {
           ))}
         </div>
       </div>
+
+      <CoachChat />
+      <VoiceDiagnostics />
     </div>
   );
 }

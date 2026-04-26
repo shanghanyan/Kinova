@@ -7,9 +7,10 @@ import { Dragon } from "@/components/ui/Dragon";
 interface SkillsScreenProps {
   state: GameState;
   onNav: (screen: string) => void;
+  onToggleSkill: (skillId: string) => void;
 }
 
-export function SkillsScreen({ state, onNav }: SkillsScreenProps) {
+export function SkillsScreen({ state, onNav, onToggleSkill }: SkillsScreenProps) {
   const [selected, setSelected] = useState<string | null>(null);
   const statTag = {
     pow: { label: "POWER", color: "#ff5f2e", bg: "rgba(255,95,46,0.15)" },
@@ -20,7 +21,7 @@ export function SkillsScreen({ state, onNav }: SkillsScreenProps) {
     {
       id: "dragon_breath",
       tier: 1,
-      icon: "🐉",
+      icon: "DB",
       name: "Dragon Breath",
       desc: "Controlled exhale and core bracing on heavy reps.",
       stats: ["pow", "sta"] as const,
@@ -30,7 +31,7 @@ export function SkillsScreen({ state, onNav }: SkillsScreenProps) {
     {
       id: "lightning_step",
       tier: 1,
-      icon: "⚡",
+      icon: "LS",
       name: "Lightning Step",
       desc: "Explosive lateral cuts and quick-feet patterns.",
       stats: ["agi", "sta"] as const,
@@ -40,7 +41,7 @@ export function SkillsScreen({ state, onNav }: SkillsScreenProps) {
     {
       id: "iron_scales",
       tier: 2,
-      icon: "🛡️",
+      icon: "IS",
       name: "Iron Scales",
       desc: "Full-body tension holds and stability training.",
       stats: ["pow", "agi"] as const,
@@ -50,7 +51,7 @@ export function SkillsScreen({ state, onNav }: SkillsScreenProps) {
     {
       id: "storm_dance",
       tier: 3,
-      icon: "💃",
+      icon: "SD",
       name: "Storm Dance",
       desc: "Dance-HIIT fusion to test full-body control.",
       stats: ["agi", "sta", "pow"] as const,
@@ -65,7 +66,7 @@ export function SkillsScreen({ state, onNav }: SkillsScreenProps) {
     <div className="p-6 pb-24">
       <div className="mb-5 flex items-center gap-3">
         <button className="btn btn-ghost px-4 py-2 text-xs" onClick={() => onNav("home")}>
-          ← BACK
+          BACK
         </button>
         <div className="font-display text-lg font-black">SKILL TREE</div>
       </div>
@@ -104,6 +105,11 @@ export function SkillsScreen({ state, onNav }: SkillsScreenProps) {
                     <div className="mb-1 flex items-center gap-2">
                       <span className="font-display text-[11px] font-bold">{sk.name}</span>
                       {sk.unlocked && <div className="h-[7px] w-[7px] rounded-full bg-[var(--success)]" />}
+                      {state.activeSkills.includes(sk.id) && (
+                        <span className="rounded-full bg-[var(--surface)] px-2 py-1 font-display text-[9px] text-[var(--xp)]">
+                          ACTIVE
+                        </span>
+                      )}
                     </div>
                     <div className="flex flex-wrap gap-1">
                       {sk.stats.map((st) => (
@@ -117,6 +123,17 @@ export function SkillsScreen({ state, onNav }: SkillsScreenProps) {
                 {selected === sk.id && (
                   <div className="mt-3 border-t border-[var(--border)] pt-3">
                     <div className="text-[13px] leading-relaxed text-white/70">{sk.desc}</div>
+                    {sk.unlocked && (
+                      <button
+                        className={`btn mt-3 px-3 py-2 text-[10px] ${state.activeSkills.includes(sk.id) ? "btn-ghost" : "btn-xp"}`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onToggleSkill(sk.id);
+                        }}
+                      >
+                        {state.activeSkills.includes(sk.id) ? "DEACTIVATE" : "ACTIVATE"}
+                      </button>
+                    )}
                   </div>
                 )}
               </div>
