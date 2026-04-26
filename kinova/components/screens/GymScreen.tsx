@@ -6,7 +6,7 @@ import type { GameState } from "@/lib/types";
 import { FeedbackChip } from "@/components/ui/FeedbackChip";
 import { Dragon } from "@/components/ui/Dragon";
 import { useVoiceInput } from "@/lib/useVoiceInput";
-import { generateAndSpeakCoachReply, speak, speakDebounced, unlockVoice } from "@/lib/voice";
+import { generateAndSpeakCoachReply, speak, unlockVoice } from "@/lib/voice";
 
 interface GymScreenProps {
   state: GameState;
@@ -43,7 +43,6 @@ export function GymScreen({ state, onRep, onNav, onSetComplete, isActive = true 
   const [goodRepCount, setGoodRepCount] = useState(0);
   const [lastVoice, setLastVoice] = useState("");
   const [lastCorrection, setLastCorrection] = useState<{ text: string; at: number } | null>(null);
-  const [wasLowForm, setWasLowForm] = useState(false);
   const split = WORKOUT_SPLITS[dayKey];
   const activeItem = split[exIdx % split.length];
 
@@ -82,7 +81,6 @@ export function GymScreen({ state, onRep, onNav, onSetComplete, isActive = true 
     });
     setCombo((c) => (quality === "fix" ? 0 : c + 1));
     if (quality !== "fix") setGoodRepCount((n) => n + 1);
-    if (quality === "perfect") speakDebounced("Perfect rep. Keep this quality.");
     setTimeout(() => setFeedback(null), 900);
   };
 
@@ -129,28 +127,24 @@ export function GymScreen({ state, onRep, onNav, onSetComplete, isActive = true 
               onSetComplete(data);
               setExIdx((i) => i + 1);
             }}
-            onFormUpdate={({ score, errors }) => {
+            onFormUpdate={({ score, errors, movement }) => {
               setFormScore(score);
               const currentError = errors[0]?.replaceAll("_", " ");
               const now = Date.now();
-              const isLow = score < 65;
+              const isMoving = movement > 4;
+              const isLow = score < 75;
 
-              if (isLow && currentError) {
+              if (isMoving && isLow && currentError) {
                 const prefixed = `${activeItem.exercise}: ${currentError}`;
                 const canSpeak =
                   !lastCorrection ||
                   lastCorrection.text !== prefixed ||
-                  now - lastCorrection.at > 3500;
+                  now - lastCorrection.at > 4500;
                 if (canSpeak) {
                   speak(prefixed, false);
                   setLastCorrection({ text: prefixed, at: now });
                 }
               }
-
-              if (wasLowForm && score >= 75) {
-                speakDebounced(`${activeItem.exercise}: form recovered, keep this pattern.`, 5000);
-              }
-              setWasLowForm(isLow);
             }}
             isActive={isActive}
             autoVoiceCues={false}

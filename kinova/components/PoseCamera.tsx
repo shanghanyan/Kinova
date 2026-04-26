@@ -9,6 +9,48 @@ import { initPoseLandmarker } from "@/lib/mediapipe/setup";
 import { speak } from "@/lib/voice";
 import { Dragon } from "./ui/Dragon";
 
+type PoseLandmark = {
+  x: number;
+  y: number;
+  visibility?: number;
+  presence?: number;
+};
+
+const REQUIRED_KEYPOINTS = [11, 12, 13, 14, 15, 16, 23, 24, 25, 26, 27, 28] as const;
+const DEFAULT_VISIBILITY = 0.2;
+
+type TrackingProfile = {
+  minVisibility: number;
+  minMotionForRep: number;
+  minMotionForFeedback: number;
+};
+
+const TRACKING_PROFILES: Record<string, TrackingProfile> = {
+  SQUAT: { minVisibility: 0.2, minMotionForRep: 4.5, minMotionForFeedback: 3.5 },
+  "PUSH-UP": { minVisibility: 0.18, minMotionForRep: 3.2, minMotionForFeedback: 2.4 },
+  PUSHUP: { minVisibility: 0.18, minMotionForRep: 3.2, minMotionForFeedback: 2.4 },
+  LUNGE: { minVisibility: 0.2, minMotionForRep: 4.0, minMotionForFeedback: 3.0 },
+};
+
+function getTrackingProfile(exerciseName: string): TrackingProfile {
+  return TRACKING_PROFILES[exerciseName.trim().toUpperCase()] ?? {
+    minVisibility: DEFAULT_VISIBILITY,
+    minMotionForRep: 4,
+    minMotionForFeedback: 3,
+  };
+}
+
+function hasReliableFullSkeleton(landmarks: PoseLandmark[], minVisibility: number): boolean {
+  return REQUIRED_KEYPOINTS.every((idx) => {
+    const lm = landmarks[idx];
+    if (!lm) return false;
+    if (lm.x < 0 || lm.x > 1 || lm.y < 0 || lm.y > 1) return false;
+    if (typeof lm.visibility === "number" && lm.visibility < minVisibility) return false;
+    if (typeof lm.presence === "number" && lm.presence < minVisibility) return false;
+    return true;
+  });
+}
+
 export interface SetData {
   reps: number;
   avgFormScore: number;
@@ -99,6 +141,7 @@ export function PoseCamera({
         });
         const landmarker = await initPoseLandmarker();
         let analyzer = getExerciseAnalyzer(exerciseRef.current);
+        let trackingProfile = getTrackingProfile(exerciseRef.current);
         let currentExercise = exerciseRef.current;
         let phase = "up";
         let prevAngles: BodyAngles | null = null;
@@ -113,6 +156,7 @@ export function PoseCamera({
           if (exerciseRef.current !== currentExercise) {
             currentExercise = exerciseRef.current;
             analyzer = getExerciseAnalyzer(currentExercise);
+            trackingProfile = getTrackingProfile(currentExercise);
             phase = "up";
             prevAngles = null;
             prevTs = performance.now();
@@ -122,21 +166,37 @@ export function PoseCamera({
             setReps(0);
           }
           const result = landmarker.detectForVideo(videoRef.current, performance.now());
-          const landmarks = result.landmarks?.[0];
+          const landmarks = result.landmarks?.[0] as PoseLandmark[] | undefined;
           if (landmarks) {
             lastLandmarkAtRef.current = performance.now();
             setWarning((prev) => (prev ? null : prev));
+            const fullSkeletonVisible = hasReliableFullSkeleton(landmarks, trackingProfile.minVisibility);
+            if (!fullSkeletonVisible) {
+              setWarning("Full body not visible. Step back so head-to-ankles are in frame.");
+              prevAngles = null;
+              prevTs = performance.now();
+              onFormUpdateRef.current?.({
+                score: 100,
+                errors: [],
+                phase,
+                movement: 0,
+              });
+            } else {
             const angles = extractAngles(landmarks);
             if (angles) {
-              phase = analyzer.detectPhase(angles, phase);
-              const rep = repCounter.update(phase);
-              const feedback = analyzer.analyzeFrame(angles, phase, injuriesRef.current);
-              const frameScore = analyzer.scoreRep(feedback);
               const movement =
                 prevAngles && performance.now() - prevTs > 0
                   ? Math.abs((angles.leftKnee ?? 0) - (prevAngles.leftKnee ?? 0)) /
                     ((performance.now() - prevTs) / 1000)
                   : 0;
+              const enoughMotionForRep = movement >= trackingProfile.minMotionForRep;
+              const enoughMotionForFeedback = movement >= trackingProfile.minMotionForFeedback;
+              if (enoughMotionForRep) {
+                phase = analyzer.detectPhase(angles, phase);
+              }
+              const rep = enoughMotionForRep ? repCounter.update(phase) : null;
+              const feedback = enoughMotionForFeedback ? analyzer.analyzeFrame(angles, phase, injuriesRef.current) : [];
+              const frameScore = enoughMotionForFeedback ? analyzer.scoreRep(feedback) : 100;
               onFormUpdateRef.current?.({
                 score: frameScore,
                 errors: feedback.map((f) => f.message),
@@ -166,6 +226,7 @@ export function PoseCamera({
                   }
                 }
               }
+            }
             }
           } else if (performance.now() - lastLandmarkAtRef.current > 2500) {
             setWarning("Tracking lost: move into frame and ensure good lighting.");

@@ -29,6 +29,7 @@ export function DanceScreen({ world, state, onRep, onNav, isActive = true }: Dan
   const [moveCue, setMoveCue] = useState("Ready stance");
   const [audioEnabled, setAudioEnabled] = useState(false);
   const audioCtxRef = useRef<AudioContext | null>(null);
+  const musicRef = useRef<HTMLAudioElement | null>(null);
   const lastCueAtRef = useRef(0);
   const cuePendingRef = useRef(false);
   const movementRef = useRef(0);
@@ -47,7 +48,7 @@ export function DanceScreen({ world, state, onRep, onNav, isActive = true }: Dan
     state.activeSkills.includes("iron_scales") ||
     state.activeSkills.includes("storm_dance");
 
-  const bpm = hasSpeedSkill ? 120 : 96;
+  const bpm = hasSpeedSkill ? 170 : 140;
   const cueIntervalMs = Math.max(6500, Math.round(((60 / bpm) * 1000) * 12));
 
   const getFallbackCue = useCallback(() => {
@@ -105,6 +106,36 @@ export function DanceScreen({ world, state, onRep, onNav, isActive = true }: Dan
     await audioCtxRef.current?.suspend();
     setAudioEnabled(false);
   }, [audioEnabled]);
+
+  useEffect(() => {
+    if (!isActive || !audioEnabled) {
+      if (musicRef.current) {
+        musicRef.current.pause();
+        musicRef.current.currentTime = 0;
+        musicRef.current = null;
+      }
+      return;
+    }
+
+    const mode = hasSpeedSkill ? "fast" : "slow";
+    const track = new Audio(`/api/dance-track?mode=${mode}`);
+    track.preload = "auto";
+    track.volume = 0.75;
+    track.onended = () => {
+      setAudioEnabled(false);
+      onNav("worlds");
+    };
+    musicRef.current = track;
+    void track.play().catch(() => undefined);
+
+    return () => {
+      track.pause();
+      track.currentTime = 0;
+      if (musicRef.current === track) {
+        musicRef.current = null;
+      }
+    };
+  }, [audioEnabled, hasSpeedSkill, isActive, onNav]);
 
   const handleMove = useCallback((quality: "perfect" | "good" | "miss") => {
     const pts = { perfect: 100, good: 60, miss: 10 };
@@ -192,17 +223,6 @@ export function DanceScreen({ world, state, onRep, onNav, isActive = true }: Dan
       if (movementRef.current > 85) handleMove("perfect");
       else if (movementRef.current > 45) handleMove("good");
       else if (movementRef.current > 1) handleMove("miss");
-      const ac = audioCtxRef.current;
-      if (audioEnabled && ac && ac.state === "running") {
-        const osc = ac.createOscillator();
-        const gain = ac.createGain();
-        osc.frequency.value = 880;
-        gain.gain.value = 0.04;
-        osc.connect(gain);
-        gain.connect(ac.destination);
-        osc.start();
-        osc.stop(ac.currentTime + 0.05);
-      }
     }, beatMs);
     return () => {
       clearInterval(id);
