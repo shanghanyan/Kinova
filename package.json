@@ -1,0 +1,27 @@
+{
+  "name": "kinova",
+  "version": "1.0.0",
+  "private": true,
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "setup" : "npm --prefix arena install",
+    "dev": "npm --prefix arena run dev",
+    "build": "npm --prefix arena run build",
+    "start": "npm --prefic arena run start",
+    "lint": "npm --prefix arena run lint"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/shanghanyan/Kinova.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/shanghanyan/Kinova/issues"
+  },
+  "homepage": "https://github.com/shanghanyan/Kinova#readme"
+}
