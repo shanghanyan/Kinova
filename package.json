@@ -9,7 +9,7 @@
     "setup" : "npm --prefix arena install",
     "dev": "npm --prefix arena run dev",
     "build": "npm --prefix arena run build",
-    "start": "npm --prefic arena run start",
+    "start": "npm --prefix arena run start",
     "lint": "npm --prefix arena run lint"
   },
   "repository": {
