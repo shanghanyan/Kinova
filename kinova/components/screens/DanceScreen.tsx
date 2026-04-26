@@ -25,7 +25,6 @@ export function DanceScreen({ world, state, onRep, onNav, isActive = true }: Dan
   const [feedback, setFeedback] = useState<{ text: string; type: "perfect" | "good" | "miss" } | null>(null);
   const [beat, setBeat] = useState(0);
   const [movement, setMovement] = useState(0);
-  const [bpm] = useState(120);
   const [lastVoice, setLastVoice] = useState("");
   const [moveCue, setMoveCue] = useState("Ready stance");
   const [audioEnabled, setAudioEnabled] = useState(false);
@@ -36,22 +35,58 @@ export function DanceScreen({ world, state, onRep, onNav, isActive = true }: Dan
   const comboRef = useRef(0);
   const onRepRef = useRef(onRep);
   const defaultCueIdxRef = useRef(0);
+  const randomCueOffsetRef = useRef(0);
+
+  const hasSpeedSkill = state.activeSkills.includes("lightning_step") || state.activeSkills.includes("storm_dance");
+  const hasStrengthSkill =
+    state.activeSkills.includes("dragon_breath") ||
+    state.activeSkills.includes("iron_scales") ||
+    state.activeSkills.includes("storm_dance");
+  const hasAgilitySkill =
+    state.activeSkills.includes("lightning_step") ||
+    state.activeSkills.includes("iron_scales") ||
+    state.activeSkills.includes("storm_dance");
+
+  const bpm = hasSpeedSkill ? 120 : 96;
+  const cueIntervalMs = Math.max(6500, Math.round(((60 / bpm) * 1000) * 12));
 
   const getFallbackCue = useCallback(() => {
-    if (state.activeSkills.includes("lightning_step")) return "Quick side step and tap";
-    if (state.activeSkills.includes("storm_dance")) return "Rotate hips and drive through";
-    if (state.activeSkills.includes("iron_guard")) return "Plant feet and hold center";
-    const defaultCues = [
+    const baseCues = [
       "Step right and tap",
       "Step left and tap",
       "Two-count bounce in place",
       "Lift knees and hold rhythm",
       "Small hop then reset center",
+      "Pivot and face front",
+      "Reach high then drop low",
     ];
-    const cue = defaultCues[defaultCueIdxRef.current % defaultCues.length];
+
+    const strengthCues = hasStrengthSkill
+      ? [
+          "Drop into two lunges",
+          "Two bodyweight squats now",
+          "Three push ups then rise",
+        ]
+      : [];
+
+    const agilityCues = hasAgilitySkill
+      ? [
+          "Side lunge stretch and hold",
+          "Hamstring reach stretch switch",
+          "Calf stretch step and hold",
+          "Hip opener stretch then reset",
+        ]
+      : [];
+
+    const cuePool = [...baseCues, ...strengthCues, ...agilityCues];
+    if (!cuePool.length) return "Step right and tap";
+
+    const idx = (defaultCueIdxRef.current + randomCueOffsetRef.current) % cuePool.length;
+    randomCueOffsetRef.current = (randomCueOffsetRef.current + 3) % cuePool.length;
+    const cue = cuePool[idx];
     defaultCueIdxRef.current += 1;
     return cue;
-  }, [state.activeSkills]);
+  }, [hasAgilitySkill, hasStrengthSkill]);
 
   const toggleAudio = useCallback(async () => {
     const win = window as WindowWithWebkitAudio;
@@ -99,6 +134,7 @@ export function DanceScreen({ world, state, onRep, onNav, isActive = true }: Dan
         sessionId: `dance-cue-${world.id}`,
         systemPrompt:
           `You are a dance choreographer for ${world.style}. Active skills: ${activeSkills}. ` +
+          `Current BPM is ${bpm}. Keep cues practical for this tempo. ` +
           "Return exactly one short move cue (4-8 words), imperative voice, no punctuation at end, no analysis.",
         interrupt: false,
       });
@@ -125,11 +161,11 @@ export function DanceScreen({ world, state, onRep, onNav, isActive = true }: Dan
     } finally {
       cuePendingRef.current = false;
     }
-  }, [getFallbackCue, world.id, world.style]);
+  }, [bpm, getFallbackCue, state.activeSkills, world.id, world.style]);
 
   useEffect(() => {
     if (!isActive) return;
-    if (Date.now() - lastCueAtRef.current > 1200) {
+    if (Date.now() - lastCueAtRef.current > 1500) {
       void requestMoveCue();
     }
   }, [isActive, requestMoveCue]);
@@ -148,7 +184,7 @@ export function DanceScreen({ world, state, onRep, onNav, isActive = true }: Dan
     const id = setInterval(() => {
       setBeat((b) => {
         const nextBeat = b + 1;
-        if (nextBeat % 8 === 0 && Date.now() - lastCueAtRef.current > 4500) {
+        if (nextBeat % 8 === 0 && Date.now() - lastCueAtRef.current > cueIntervalMs) {
           void requestMoveCue();
         }
         return nextBeat;
@@ -171,7 +207,7 @@ export function DanceScreen({ world, state, onRep, onNav, isActive = true }: Dan
     return () => {
       clearInterval(id);
     };
-  }, [audioEnabled, bpm, handleMove, isActive, requestMoveCue]);
+  }, [audioEnabled, bpm, cueIntervalMs, handleMove, isActive, requestMoveCue]);
 
   useEffect(() => {
     if (isActive) return;
