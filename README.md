@@ -1,5 +1,6 @@
 # Kinova
 ### *Kinetic. Novel. Yours.*
+By Ava Cheng, Vanisha Kheterpal, Charlotte Wong, and Alexandra Ye
 
 ---
 
