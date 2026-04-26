@@ -14,11 +14,11 @@ import type { SetData } from "@/components/PoseCamera";
 const INITIAL_STATE: GameState = {
   creature: { name: "DRAKELLE", state: "idle" },
   level: 1,
-  xp: 340,
+  xp: 0,
   xpMax: 500,
-  streak: 7,
+  streak: 0,
   reps: 0,
-  stats: { pow: 72, agi: 55, sta: 68 },
+  stats: { pow: 0, agi: 0, sta: 0 },
   missions: [
     { icon: "🐉", label: "Complete 20 Reps", desc: "Any strength exercise", xp: 50, done: false },
     { icon: "💃", label: "Dance Session", desc: "Any world, 3 min", xp: 40, done: false },

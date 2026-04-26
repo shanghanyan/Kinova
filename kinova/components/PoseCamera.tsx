@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { extractAngles } from "@/lib/mediapipe/angles";
+import { extractAngles, type BodyAngles } from "@/lib/mediapipe/angles";
 import { getExerciseAnalyzer } from "@/lib/mediapipe/exercises";
 import { InjuryRiskEngine } from "@/lib/mediapipe/injuryRiskEngine";
 import { RepCounter } from "@/lib/mediapipe/repCounter";
@@ -23,6 +23,8 @@ interface PoseCameraProps {
   targetReps: number;
   danceMode?: "flow" | "power" | "recovery";
   persona?: string;
+  skeletonColor?: string;
+  onFormUpdate?: (payload: { score: number; errors: string[]; phase: string; movement: number }) => void;
 }
 
 export function PoseCamera({
@@ -33,6 +35,8 @@ export function PoseCamera({
   targetReps,
   danceMode = "flow",
   persona = "cinematic",
+  skeletonColor = "#00e5ff",
+  onFormUpdate,
 }: PoseCameraProps) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -57,6 +61,8 @@ export function PoseCamera({
         const landmarker = await initPoseLandmarker();
         const analyzer = getExerciseAnalyzer(exerciseName);
         let phase = "up";
+        let prevAngles: BodyAngles | null = null;
+        let prevTs = performance.now();
         setStatus("Tracking...");
 
         setCompletedRef.current = false;
@@ -69,9 +75,23 @@ export function PoseCamera({
             if (angles) {
               phase = analyzer.detectPhase(angles, phase);
               const rep = repCounter.update(phase);
+              const feedback = analyzer.analyzeFrame(angles, phase, userInjuries);
+              const frameScore = analyzer.scoreRep(feedback);
+              const movement =
+                prevAngles && performance.now() - prevTs > 0
+                  ? Math.abs((angles.leftKnee ?? 0) - (prevAngles.leftKnee ?? 0)) /
+                    ((performance.now() - prevTs) / 1000)
+                  : 0;
+              onFormUpdate?.({
+                score: frameScore,
+                errors: feedback.map((f) => f.message),
+                phase,
+                movement,
+              });
+              prevAngles = angles;
+              prevTs = performance.now();
               if (rep) {
-                const feedback = analyzer.analyzeFrame(angles, phase, userInjuries);
-                const score = analyzer.scoreRep(feedback);
+                const score = frameScore;
                 riskEngine.analyze(score);
                 repScores.current.push(score);
                 setReps(rep);
@@ -99,7 +119,15 @@ export function PoseCamera({
             canvasRef.current.width = videoRef.current.videoWidth || 640;
             canvasRef.current.height = videoRef.current.videoHeight || 480;
             ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
-            if (landmarks) drawSkeleton(ctx, landmarks, canvasRef.current.width, canvasRef.current.height);
+            if (landmarks) {
+              drawSkeleton(
+                ctx,
+                landmarks,
+                canvasRef.current.width,
+                canvasRef.current.height,
+                skeletonColor,
+              );
+            }
           }
           raf = requestAnimationFrame(tick);
         };
@@ -117,12 +145,22 @@ export function PoseCamera({
       cancelSpeech();
       if (stream) stream.getTracks().forEach((t) => t.stop());
     };
-  }, [exerciseName, onRep, onSetComplete, repCounter, riskEngine, targetReps, userInjuries]);
+  }, [
+    exerciseName,
+    onFormUpdate,
+    onRep,
+    onSetComplete,
+    repCounter,
+    riskEngine,
+    skeletonColor,
+    targetReps,
+    userInjuries,
+  ]);
 
   return (
     <div className="relative overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface2)]">
-      <video ref={videoRef} className="h-[360px] w-full object-cover" muted playsInline />
-      <canvas ref={canvasRef} className="absolute inset-0 h-[360px] w-full" />
+      <video ref={videoRef} className="h-full w-full object-cover -scale-x-100" muted playsInline />
+      <canvas ref={canvasRef} className="absolute inset-0 h-full w-full -scale-x-100" />
       <div className="absolute left-3 top-3 rounded-full bg-black/50 px-3 py-1 font-display text-xs">
         {status} | {exerciseName} | {danceMode.toUpperCase()} | {persona} | Reps: {reps}/{targetReps}
       </div>
@@ -138,6 +176,7 @@ function drawSkeleton(
   landmarks: Array<{ x: number; y: number }>,
   w: number,
   h: number,
+  color = "#00e5ff",
 ) {
   const pairs: Array<[number, number]> = [
     [11, 13],
@@ -153,7 +192,7 @@ function drawSkeleton(
     [24, 26],
     [26, 28],
   ];
-  ctx.strokeStyle = "#00e5ff";
+  ctx.strokeStyle = color;
   ctx.lineWidth = 2;
   pairs.forEach(([a, b]) => {
     const p1 = landmarks[a];

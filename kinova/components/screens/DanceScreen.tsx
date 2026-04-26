@@ -1,10 +1,16 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type { GameState, World } from "@/lib/types";
 import { FeedbackChip } from "@/components/ui/FeedbackChip";
-import { SkeletonFigure } from "@/components/ui/SkeletonFigure";
 import { Dragon } from "@/components/ui/Dragon";
+import { DancePoseCamera } from "@/components/DancePoseCamera";
+import { useVoiceInput } from "@/lib/useVoiceInput";
+import { speak } from "@/lib/voice";
+
+interface WindowWithWebkitAudio extends Window {
+  webkitAudioContext?: typeof AudioContext;
+}
 
 interface DanceScreenProps {
   world: World;
@@ -18,13 +24,13 @@ export function DanceScreen({ world, state, onRep, onNav }: DanceScreenProps) {
   const [combo, setCombo] = useState(0);
   const [feedback, setFeedback] = useState<{ text: string; type: "perfect" | "good" | "miss" } | null>(null);
   const [beat, setBeat] = useState(0);
+  const [movement, setMovement] = useState(0);
+  const [bpm] = useState(120);
+  const { isListening, supported, start, stop } = useVoiceInput((transcript) => {
+    speak(`Love that vibe: ${transcript}. Keep moving!`, true);
+  });
 
-  useEffect(() => {
-    const id = setInterval(() => setBeat((b) => b + 1), 500);
-    return () => clearInterval(id);
-  }, []);
-
-  const handleMove = (quality: "perfect" | "good" | "miss") => {
+  const handleMove = useCallback((quality: "perfect" | "good" | "miss") => {
     const pts = { perfect: 100, good: 60, miss: 10 };
     const f = {
       perfect: { text: "PERFECT!", type: "perfect" as const },
@@ -36,7 +42,31 @@ export function DanceScreen({ world, state, onRep, onNav }: DanceScreenProps) {
     setScore((s) => s + pts[quality] * (combo >= 5 ? 2 : 1));
     onRep({ stat: "sta", xp: pts[quality] / 10 });
     setTimeout(() => setFeedback(null), 900);
-  };
+  }, [combo, onRep]);
+
+  useEffect(() => {
+    const beatMs = (60 / bpm) * 1000;
+    const win = window as WindowWithWebkitAudio;
+    const AudioCtx = globalThis.AudioContext || win.webkitAudioContext;
+    const ac = AudioCtx ? new AudioCtx() : null;
+    const id = setInterval(() => {
+      setBeat((b) => b + 1);
+      if (movement > 85) handleMove("perfect");
+      else if (movement > 45) handleMove("good");
+      else if (movement > 1) handleMove("miss");
+      if (ac) {
+        const osc = ac.createOscillator();
+        const gain = ac.createGain();
+        osc.frequency.value = 880;
+        gain.gain.value = 0.03;
+        osc.connect(gain);
+        gain.connect(ac.destination);
+        osc.start();
+        osc.stop(ac.currentTime + 0.05);
+      }
+    }, beatMs);
+    return () => clearInterval(id);
+  }, [bpm, movement, handleMove]);
 
   return (
     <div className="p-6 pb-24">
@@ -67,10 +97,29 @@ export function DanceScreen({ world, state, onRep, onNav }: DanceScreenProps) {
         ))}
       </div>
 
-      <div className="cam-feed mb-3 h-[240px]" style={{ border: `1px dashed ${world.accent}44` }}>
-        <div className="skeleton-overlay">
-          <SkeletonFigure />
+      <div className="mb-3 grid grid-cols-4 gap-3">
+        <div className="col-span-3">
+          <DancePoseCamera onMovement={setMovement} pulse />
         </div>
+        <div className="col-span-1 rounded-2xl border border-[var(--border)] bg-[var(--surface2)] p-3">
+          <div className="mb-3 flex justify-center">
+            <Dragon size={Math.min(130, 56 + combo * 2)} state={feedback?.type === "perfect" ? "energized" : "idle"} level={state.level} />
+          </div>
+          <div className="mb-2 text-center font-display text-xs text-[var(--muted)]">BPM {bpm}</div>
+          {supported && (
+            <button
+              className="btn btn-ghost w-full px-2 py-2 text-[10px]"
+              onPointerDown={start}
+              onPointerUp={stop}
+              onPointerLeave={stop}
+            >
+              {isListening ? "🎙 LISTENING..." : "🎤 HOLD TO TALK"}
+            </button>
+          )}
+        </div>
+      </div>
+
+      <div className="cam-feed mb-3 h-[120px]" style={{ border: `1px dashed ${world.accent}44` }}>
         {feedback && (
           <div className="absolute left-0 right-0 top-4 flex justify-center">
             <FeedbackChip text={feedback.text} type={feedback.type} />
@@ -81,28 +130,9 @@ export function DanceScreen({ world, state, onRep, onNav }: DanceScreenProps) {
             <div className="combo-text text-xl">x{combo}!</div>
           </div>
         )}
-        <div className="absolute bottom-3 right-3">
-          <Dragon size={56} state={feedback?.type === "perfect" ? "energized" : "idle"} level={state.level} />
-        </div>
         <div className="absolute bottom-3 left-3 font-display text-[9px] tracking-[0.1em]" style={{ color: world.accent }}>
-          ▶ GUIDE AVATAR ACTIVE
+          ▶ GUIDE AVATAR ACTIVE • MOVEMENT {Math.round(movement)}
         </div>
-      </div>
-
-      <div className="mb-4 grid grid-cols-3 gap-2">
-        <button className="btn btn-xp px-2 py-3 text-[10px]" onClick={() => handleMove("perfect")}>
-          ⚡ PERFECT
-        </button>
-        <button
-          className="btn px-2 py-3 text-[10px]"
-          style={{ background: world.accent, color: "#07090f" }}
-          onClick={() => handleMove("good")}
-        >
-          ✓ GOOD
-        </button>
-        <button className="btn btn-ghost px-2 py-3 text-[10px]" onClick={() => handleMove("miss")}>
-          ✗ MISS
-        </button>
       </div>
 
       <div className="card flex justify-around text-center">
