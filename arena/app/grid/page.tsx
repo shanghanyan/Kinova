@@ -15,7 +15,7 @@ export default function GridPage() {
       <WorldBackground worldId="neon_arcade" intensity={0.4} />
       <div className="relative z-10 max-w-3xl mx-auto text-center space-y-6">
         <h1 className="font-display text-5xl text-grid-gradient">THE GRID</h1>
-        <p className="text-text-2">Dance cardio. Totally personalised. You lead.</p>
+        <p className="creature-muted">Dance cardio. Totally personalised. You lead.</p>
 
         <div className="flex flex-col items-center gap-3">
           <CharacterSprite characterId="nova" animation="idle" size={160} />
@@ -28,8 +28,8 @@ export default function GridPage() {
         }} />
 
         {plan && (
-          <div className="card text-left space-y-2">
-            <div className="font-display text-2xl">Session Preview</div>
+          <div className="creature-card p-5 text-left space-y-2">
+            <div className="creature-title text-lg">Session Preview</div>
             <div>Style: {plan.style}</div>
             <div>BPM: {plan.bpm}</div>
             <div>Duration: {plan.duration}</div>

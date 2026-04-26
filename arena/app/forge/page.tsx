@@ -26,12 +26,12 @@ export default function ForgePage() {
       <WorldBackground worldId="neon_arcade" intensity={0.25} />
       <div className="relative z-10 max-w-5xl mx-auto space-y-6">
         <h1 className="font-display text-5xl text-forge-gradient">THE FORGE</h1>
-        <p className="text-text-2">Today I have got this for you, or pick what you want to work on:</p>
+        <p className="creature-muted">Today I have got this for you, or pick what you want to work on:</p>
 
         <div className="grid md:grid-cols-2 gap-4">
           {ready.map((e) => (
-            <button key={e.id} onClick={() => setSelectedId(e.id)} className="card text-left hover:scale-[1.01] transition-all" style={{ borderColor: selectedId === e.id ? 'var(--forge)' : 'var(--border)', borderWidth: selectedId === e.id ? 2 : 1 }}>
-              <div className="font-display text-2xl">{e.emoji} {e.name}</div>
+            <button key={e.id} onClick={() => setSelectedId(e.id)} className="creature-card text-left hover:scale-[1.01] transition-all p-5" style={{ borderColor: selectedId === e.id ? 'var(--forge)' : 'var(--border)', borderWidth: selectedId === e.id ? 2 : 1 }}>
+              <div className="creature-title text-xl">{e.emoji} {e.name}</div>
               <div className="text-sm text-text-2">{e.muscles.join(' · ')}</div>
               <div className="flex gap-2 mt-2 text-xs">
                 <span className="px-2 py-1 rounded-full bg-forge/20 text-forge">Camera tracked ✓</span>
@@ -43,8 +43,8 @@ export default function ForgePage() {
 
         <BeginnerGuide what={`${selected.name} is a beginner-friendly movement.`} why={selected.whyDoIt} feel="You might feel your muscles working and maybe a little shaky at first." tip={selected.beginnerTip} />
 
-        <div className="card">
-          <div className="font-display text-xl mb-2">Coming Soon</div>
+        <div className="creature-card p-5">
+          <div className="creature-title text-base mb-2">Coming Soon</div>
           <div className="flex flex-wrap gap-2">{comingSoon.map((name) => <span key={name} className="px-3 py-1 rounded-full bg-bg-raised text-text-3 text-sm">{name}</span>)}</div>
         </div>
 

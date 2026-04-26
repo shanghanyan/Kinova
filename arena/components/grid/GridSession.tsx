@@ -6,6 +6,7 @@ import { ScorePopup } from './ScorePopup';
 import { MoveDisplay } from './MoveDisplay';
 import { BeatVisualizer } from './BeatVisualizer';
 import { WorldBackground } from '@/components/world/WorldBackground';
+import { DanceCamera } from './DanceCamera';
 
 const MOVES = [
   { name: 'Bounce Step', direction: 'side-to-side' },
@@ -50,7 +51,8 @@ export function GridSession() {
 
       <div className="relative z-10 grid md:grid-cols-[55%_45%] min-h-[calc(100vh-112px)]">
         <section className="relative bg-black/30 border-r border-border p-4">
-          <div className="w-full h-full rounded-2xl bg-black/40 border border-border flex items-center justify-center">
+          <div className="w-full h-full rounded-2xl bg-black/40 border border-border flex items-center justify-center overflow-hidden relative">
+            <DanceCamera />
             <ScorePopup label={lastJudgement.label} xp={lastJudgement.xp} />
           </div>
           <div className="absolute right-6 top-6 font-display text-2xl">🔥 x{combo}</div>

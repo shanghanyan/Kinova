@@ -5,6 +5,14 @@
 @import url('https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap');
 
 :root {
+  --surface: #0d1117;
+  --surface-2: #141b26;
+  --muted: #6b7a99;
+  --str: #ff5f2e;
+  --bal: #00e5ff;
+  --car: #b44fff;
+  --font-display-ui: 'Space Mono', monospace;
+  --font-body-ui: 'Nunito', sans-serif;
   --void: #04040a;
   --bg: #090912;
   --bg-card: #111120;
@@ -67,6 +75,23 @@ body {
   border: 1px solid var(--border);
   border-radius: 16px;
   padding: 1.25rem 1.5rem;
+}
+
+.creature-card {
+  background: linear-gradient(180deg, var(--surface) 0%, var(--surface-2) 100%);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  box-shadow: 0 0 24px rgba(0, 0, 0, 0.25);
+}
+
+.creature-title {
+  font-family: var(--font-display-ui);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.creature-muted {
+  color: var(--muted);
 }
 
 body::before {
