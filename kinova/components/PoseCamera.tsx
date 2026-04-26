@@ -6,7 +6,7 @@ import { getExerciseAnalyzer } from "@/lib/mediapipe/exercises";
 import { InjuryRiskEngine } from "@/lib/mediapipe/injuryRiskEngine";
 import { RepCounter } from "@/lib/mediapipe/repCounter";
 import { initPoseLandmarker } from "@/lib/mediapipe/setup";
-import { cancelSpeech, speak } from "@/lib/voice";
+import { speak } from "@/lib/voice";
 import { Dragon } from "./ui/Dragon";
 
 export interface SetData {
@@ -152,7 +152,7 @@ export function PoseCamera({
                 setReps(rep);
                 onRepRef.current?.({ rep, score });
                 const cue = feedback.find((f) => f.voiceCue)?.voiceCue;
-                if (cue && autoVoiceCuesRef.current) speak(cue, true);
+                if (cue && autoVoiceCuesRef.current) speak(cue, false);
                 if (rep >= targetRepsRef.current) {
                   if (!setCompletedRef.current) {
                     setCompletedRef.current = true;

@@ -61,7 +61,7 @@ export function GymScreen({ state, onRep, onNav, onSetComplete, isActive = true 
       } catch {
         const fallback = `For ${activeItem.exercise}, stay controlled and keep clean posture each rep.`;
         setLastVoice(fallback);
-        speak(fallback, true);
+        speak(fallback, false);
       }
     })();
   });

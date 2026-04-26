@@ -5,7 +5,6 @@ import type { GameState, World } from "@/lib/types";
 import { FeedbackChip } from "@/components/ui/FeedbackChip";
 import { Dragon } from "@/components/ui/Dragon";
 import { PoseCamera } from "@/components/PoseCamera";
-import { useVoiceInput } from "@/lib/useVoiceInput";
 import { generateAndSpeakCoachReply, speak, unlockVoice } from "@/lib/voice";
 
 interface WindowWithWebkitAudio extends Window {
@@ -36,25 +35,23 @@ export function DanceScreen({ world, state, onRep, onNav, isActive = true }: Dan
   const movementRef = useRef(0);
   const comboRef = useRef(0);
   const onRepRef = useRef(onRep);
-  const { isListening, supported, start, stop } = useVoiceInput((transcript) => {
-    void (async () => {
-      try {
-        console.info("[dance] generating coach reply from transcript");
-        const { reply } = await generateAndSpeakCoachReply(transcript, {
-          sessionId: "dance-voice",
-          systemPrompt:
-            `You are a dance coach for ${world.style}. Reply with only the final answer in 1-2 short sentences, no chain-of-thought, no analysis.`,
-          interrupt: true,
-        });
-        const answer = reply || "Keep your rhythm steady and stay in control through each count.";
-        setLastVoice(answer);
-      } catch {
-        const fallback = "Keep your rhythm steady and stay in control through each count.";
-        setLastVoice(fallback);
-        speak(fallback, false);
-      }
-    })();
-  });
+  const defaultCueIdxRef = useRef(0);
+
+  const getFallbackCue = useCallback(() => {
+    if (state.activeSkills.includes("lightning_step")) return "Quick side step and tap";
+    if (state.activeSkills.includes("storm_dance")) return "Rotate hips and drive through";
+    if (state.activeSkills.includes("iron_guard")) return "Plant feet and hold center";
+    const defaultCues = [
+      "Step right and tap",
+      "Step left and tap",
+      "Two-count bounce in place",
+      "Lift knees and hold rhythm",
+      "Small hop then reset center",
+    ];
+    const cue = defaultCues[defaultCueIdxRef.current % defaultCues.length];
+    defaultCueIdxRef.current += 1;
+    return cue;
+  }, [state.activeSkills]);
 
   const toggleAudio = useCallback(async () => {
     const win = window as WindowWithWebkitAudio;
@@ -109,23 +106,26 @@ export function DanceScreen({ world, state, onRep, onNav, isActive = true }: Dan
         setTimeout(() => reject(new Error("Dance cue request timeout")), 8000);
       });
       const { reply } = await Promise.race([cueRequest, timeout]);
-      const cue = (reply || "Step wide and reset center").trim();
+      const rawCue = (reply || "").trim();
+      const cueWordCount = rawCue ? rawCue.split(/\s+/).length : 0;
+      const cue =
+        rawCue && cueWordCount >= 2 && cueWordCount <= 10
+          ? rawCue
+          : getFallbackCue();
       setMoveCue(cue);
+      setLastVoice(cue);
       lastCueAtRef.current = Date.now();
     } catch {
       console.info("[dance] requestMoveCue failed -> fallback cue");
-      const fallback = state.activeSkills.includes("lightning_step")
-        ? "Quick side step and tap"
-        : state.activeSkills.includes("storm_dance")
-          ? "Rotate hips and drive through"
-          : "Step out and hold center";
+      const fallback = getFallbackCue();
       setMoveCue(fallback);
+      setLastVoice(fallback);
       speak(fallback, false);
       lastCueAtRef.current = Date.now();
     } finally {
       cuePendingRef.current = false;
     }
-  }, [state.activeSkills, world.id, world.style]);
+  }, [getFallbackCue, world.id, world.style]);
 
   useEffect(() => {
     if (!isActive) return;
@@ -232,21 +232,9 @@ export function DanceScreen({ world, state, onRep, onNav, isActive = true }: Dan
             <Dragon size={Math.min(130, 56 + combo * 2)} state={feedback?.type === "perfect" ? "energized" : "idle"} level={state.level} />
           </div>
           <div className="mb-2 text-center font-display text-xs text-[var(--muted)]">BPM {bpm}</div>
-          {supported && (
-            <button
-              className="btn btn-ghost w-full px-2 py-2 text-[10px]"
-              onPointerDown={() => {
-                console.info("[dance] hold-to-talk pointer down -> unlockVoice()");
-                unlockVoice();
-                start();
-              }}
-              onPointerUp={stop}
-              onPointerLeave={stop}
-              onPointerCancel={stop}
-            >
-              {isListening ? "LISTENING..." : "HOLD TO TALK"}
-            </button>
-          )}
+          <div className="rounded-lg bg-black/20 p-2 text-center font-display text-[10px] text-[var(--muted)]">
+            COACH AUTO-CUE ACTIVE
+          </div>
         </div>
       </div>
 
@@ -284,7 +272,7 @@ export function DanceScreen({ world, state, onRep, onNav, isActive = true }: Dan
         <div className="mb-1 font-display text-[10px] tracking-[0.08em] text-[var(--muted)]">AI CUE</div>
         <div className="text-sm font-semibold text-[var(--white)]">{moveCue}</div>
         <div className="mt-2 font-display text-[10px] tracking-[0.08em] text-[var(--muted)]">COACH RESPONSE</div>
-        <div className="text-sm text-[var(--white)]">{lastVoice || "Use HOLD TO TALK for live coaching."}</div>
+        <div className="text-sm text-[var(--white)]">{lastVoice || "Coach is calling moves automatically."}</div>
       </div>
     </div>
   );

@@ -3,9 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   getVoiceDiagnosticsSnapshot,
-  speak,
   subscribeVoiceDiagnostics,
-  unlockVoice,
   type VoiceDiagnosticsSnapshot,
   type VoiceDiagnosticEvent,
 } from "@/lib/voice";
@@ -44,24 +42,9 @@ export function VoiceDiagnostics() {
       .slice(-8);
   }, [snapshot.events]);
 
-  const onVoiceTest = () => {
-    unlockVoice();
-    const synth = window.speechSynthesis;
-    const u = new SpeechSynthesisUtterance("Voice test successful");
-    const voices = synth.getVoices();
-    const google = voices.find(v => v.name === "Google US English");
-    if (google) u.voice = google;
-    synth.speak(u);
-  };
-
   return (
     <div className="mt-4 rounded-xl border border-[var(--border)] bg-[var(--surface2)] p-3">
-      <div className="mb-2 flex items-center justify-between">
-        <div className="font-display text-[10px] tracking-[0.08em] text-[var(--muted)]">VOICE DIAGNOSTICS</div>
-        <button className="btn btn-ghost px-3 py-1 text-[10px]" type="button" onClick={onVoiceTest}>
-          VOICE TEST
-        </button>
-      </div>
+      <div className="mb-2 font-display text-[10px] tracking-[0.08em] text-[var(--muted)]">VOICE DIAGNOSTICS</div>
       <div className="grid grid-cols-2 gap-2 text-xs">
         <div>supported: {snapshot.supported ? "yes" : "no"}</div>
         <div>unlocked: {snapshot.unlocked ? "yes" : "no"}</div>
